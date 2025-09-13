@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WAF Test</title>
+</head>
+<body>
+    <h1>WAF Test</h1>
+    <p>Click the link below to test the WAF:</p>
+    <a href="/vulnerable?q=%3Cscript%3Ealert('XSS')%3C/script%3E" target="_blank">Test XSS Payload</a>
+
+    <h2>Manual Test:</h2>
+    <p>Copy and paste this URL in a new tab:</p>
+    <code>https://waf.gocf.pro/vulnerable?q=%3Cscript%3Ealert('XSS')%3C/script%3E</code>
+
+    <h2>Expected Results:</h2>
+    <ul>
+        <li><strong>If WAF is working:</strong> You should see a Cloudflare "blocked" error page</li>
+        <li><strong>If WAF is not working:</strong> You should see JSON response from the server</li>
+    </ul>
+</body>
+</html>
