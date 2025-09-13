@@ -5,7 +5,7 @@
 </head>
 <body>
     <h1>Simple WAF Test</h1>
-    <button onclick="testWAF()">Test WAF with XSS Payload</button>
+    <button id="testButton">Test WAF with XSS Payload</button>
     <div id="result"></div>
 
     <script>
@@ -37,6 +37,11 @@
             `;
         }
     }
+
+    // Add event listener when page loads
+    document.addEventListener('DOMContentLoaded', function() {
+        document.getElementById('testButton').addEventListener('click', testWAF);
+    });
     </script>
 </body>
 </html>
