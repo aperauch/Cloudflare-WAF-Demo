@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cloudflare WAF Demo - Security Testing Tool</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'cf-blue': '#667eea',
+                        'cf-purple': '#764ba2'
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gradient-to-br from-cf-blue to-cf-purple min-h-screen">
+    <div class="max-w-6xl mx-auto p-6">
+        <header class="text-center mb-8 text-white">
+            <div class="flex items-center justify-center gap-4 mb-3">
+                <i class="fas fa-shield-alt text-4xl text-yellow-400"></i>
+                <h1 class="text-4xl font-bold drop-shadow-lg">Cloudflare WAF Demo</h1>
+            </div>
+            <p class="text-lg opacity-90 font-light">Interactive Security Testing & Learning Platform</p>
+        </header>
+
+        <div class="bg-gradient-to-r from-red-500 to-orange-500 text-white p-4 rounded-lg mb-8 flex items-center gap-3 shadow-lg">
+            <i class="fas fa-exclamation-triangle text-xl"></i>
+            <span class="font-medium">Educational Use Only - Test responsibly in controlled environments</span>
+        </div>
+
+        <div class="flex justify-center gap-3 mb-8 flex-wrap">
+            <button class="tab-button bg-white text-cf-blue shadow-lg px-6 py-3 rounded-lg transition-all duration-300 hover:bg-white/20 hover:transform hover:-translate-y-1 hover:shadow-lg flex items-center gap-3 font-medium active" data-tab="xss">
+                <i class="fas fa-code text-lg"></i>
+                XSS Attack
+            </button>
+            <button class="tab-button bg-white/10 backdrop-blur-md border-2 border-white/20 text-white px-6 py-3 rounded-lg transition-all duration-300 hover:bg-white/20 hover:transform hover:-translate-y-1 hover:shadow-lg flex items-center gap-3 font-medium" data-tab="sqli">
+                <i class="fas fa-database text-lg"></i>
+                SQL Injection
+            </button>
+            <button class="tab-button bg-white/10 backdrop-blur-md border-2 border-white/20 text-white px-6 py-3 rounded-lg transition-all duration-300 hover:bg-white/20 hover:transform hover:-translate-y-1 hover:shadow-lg flex items-center gap-3 font-medium" data-tab="rce">
+                <i class="fas fa-terminal text-lg"></i>
+                RCE Attack
+            </button>
+        </div>
+
+        <!-- XSS Attack Tab -->
+        <div class="tab-content bg-white rounded-xl p-8 mb-8 shadow-xl block" id="xss">
+            <div class="grid md:grid-cols-2 gap-8">
+                <div class="space-y-6">
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-800 mb-4 flex items-center gap-3">
+                            <i class="fas fa-code text-cf-blue"></i>
+                            Cross-Site Scripting (XSS)
+                        </h2>
+                        <p class="text-gray-600 leading-relaxed">XSS attacks inject malicious scripts into web pages viewed by other users. Test common XSS payloads to see how Cloudflare WAF protects against them.</p>
+                    </div>
+                    
+                    <div class="bg-gray-50 p-6 rounded-lg border-l-4 border-cf-blue">
+                        <h3 class="font-semibold text-gray-800 mb-4">Example Payloads:</h3>
+                        <div class="space-y-3">
+                            <code class="block bg-gray-100 p-3 rounded cursor-pointer hover:bg-cf-blue hover:text-white transition-colors duration-200 font-mono text-sm">&lt;script&gt;alert('XSS')&lt;/script&gt;</code>
+                            <code class="block bg-gray-100 p-3 rounded cursor-pointer hover:bg-cf-blue hover:text-white transition-colors duration-200 font-mono text-sm">&lt;img src=x onerror=alert('XSS')&gt;</code>
+                            <code class="block bg-gray-100 p-3 rounded cursor-pointer hover:bg-cf-blue hover:text-white transition-colors duration-200 font-mono text-sm">javascript:alert('XSS')</code>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-gray-50 p-6 rounded-lg">
+                    <form id="xss-form" class="space-y-6">
+                        <div>
+                            <label for="xss-payload" class="block text-sm font-semibold text-gray-700 mb-2">XSS Payload:</label>
+                            <textarea id="xss-payload" name="payload" placeholder="Enter your XSS payload here..." rows="4" class="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-cf-blue focus:ring-2 focus:ring-cf-blue/20 transition-colors duration-200 font-mono text-sm resize-vertical"></textarea>
+                        </div>
+                        <div>
+                            <label for="xss-context" class="block text-sm font-semibold text-gray-700 mb-2">Injection Context:</label>
+                            <select id="xss-context" name="context" class="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-cf-blue focus:ring-2 focus:ring-cf-blue/20 transition-colors duration-200">
+                                <option value="html">HTML Content</option>
+                                <option value="attribute">HTML Attribute</option>
+                                <option value="javascript">JavaScript Context</option>
+                                <option value="url">URL Parameter</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="w-full bg-gradient-to-r from-cf-blue to-cf-purple text-white py-3 px-6 rounded-lg font-semibold transition-all duration-300 hover:shadow-lg hover:transform hover:-translate-y-1 flex items-center justify-center gap-3">
+                            <i class="fas fa-play"></i>
+                            Test XSS Attack
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- SQL Injection Tab -->
+        <div class="tab-content bg-white rounded-xl p-8 mb-8 shadow-xl hidden" id="sqli">
+            <div class="grid md:grid-cols-2 gap-8">
+                <div class="space-y-6">
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-800 mb-4 flex items-center gap-3">
+                            <i class="fas fa-database text-cf-blue"></i>
+                            SQL Injection
+                        </h2>
+                        <p class="text-gray-600 leading-relaxed">SQL injection attacks attempt to manipulate database queries by injecting malicious SQL code. Test various SQLi techniques against WAF protection.</p>
+                    </div>
+                    
+                    <div class="bg-gray-50 p-6 rounded-lg border-l-4 border-cf-blue">
+                        <h3 class="font-semibold text-gray-800 mb-4">Example Payloads:</h3>
+                        <div class="space-y-3">
+                            <code class="block bg-gray-100 p-3 rounded cursor-pointer hover:bg-cf-blue hover:text-white transition-colors duration-200 font-mono text-sm">' OR '1'='1</code>
+                            <code class="block bg-gray-100 p-3 rounded cursor-pointer hover:bg-cf-blue hover:text-white transition-colors duration-200 font-mono text-sm">'; DROP TABLE users; --</code>
+                            <code class="block bg-gray-100 p-3 rounded cursor-pointer hover:bg-cf-blue hover:text-white transition-colors duration-200 font-mono text-sm">1' UNION SELECT * FROM users--</code>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-gray-50 p-6 rounded-lg">
+                    <form id="sqli-form" class="space-y-6">
+                        <div>
+                            <label for="sqli-payload" class="block text-sm font-semibold text-gray-700 mb-2">SQL Injection Payload:</label>
+                            <textarea id="sqli-payload" name="payload" placeholder="Enter your SQL injection payload here..." rows="4" class="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-cf-blue focus:ring-2 focus:ring-cf-blue/20 transition-colors duration-200 font-mono text-sm resize-vertical"></textarea>
+                        </div>
+                        <div>
+                            <label for="sqli-type" class="block text-sm font-semibold text-gray-700 mb-2">Attack Type:</label>
+                            <select id="sqli-type" name="type" class="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-cf-blue focus:ring-2 focus:ring-cf-blue/20 transition-colors duration-200">
+                                <option value="union">UNION-based</option>
+                                <option value="boolean">Boolean-based</option>
+                                <option value="time">Time-based</option>
+                                <option value="error">Error-based</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="w-full bg-gradient-to-r from-cf-blue to-cf-purple text-white py-3 px-6 rounded-lg font-semibold transition-all duration-300 hover:shadow-lg hover:transform hover:-translate-y-1 flex items-center justify-center gap-3">
+                            <i class="fas fa-play"></i>
+                            Test SQL Injection
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- RCE Attack Tab -->
+        <div class="tab-content bg-white rounded-xl p-8 mb-8 shadow-xl hidden" id="rce">
+            <div class="grid md:grid-cols-2 gap-8">
+                <div class="space-y-6">
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-800 mb-4 flex items-center gap-3">
+                            <i class="fas fa-terminal text-cf-blue"></i>
+                            Remote Code Execution (RCE)
+                        </h2>
+                        <p class="text-gray-600 leading-relaxed">RCE attacks attempt to execute arbitrary code on the server. Test command injection and code execution payloads against WAF filters.</p>
+                    </div>
+                    
+                    <div class="bg-gray-50 p-6 rounded-lg border-l-4 border-cf-blue">
+                        <h3 class="font-semibold text-gray-800 mb-4">Example Payloads:</h3>
+                        <div class="space-y-3">
+                            <code class="block bg-gray-100 p-3 rounded cursor-pointer hover:bg-cf-blue hover:text-white transition-colors duration-200 font-mono text-sm">; ls -la</code>
+                            <code class="block bg-gray-100 p-3 rounded cursor-pointer hover:bg-cf-blue hover:text-white transition-colors duration-200 font-mono text-sm">$(whoami)</code>
+                            <code class="block bg-gray-100 p-3 rounded cursor-pointer hover:bg-cf-blue hover:text-white transition-colors duration-200 font-mono text-sm">`cat /etc/passwd`</code>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-gray-50 p-6 rounded-lg">
+                    <form id="rce-form" class="space-y-6">
+                        <div>
+                            <label for="rce-payload" class="block text-sm font-semibold text-gray-700 mb-2">RCE Payload:</label>
+                            <textarea id="rce-payload" name="payload" placeholder="Enter your RCE payload here..." rows="4" class="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-cf-blue focus:ring-2 focus:ring-cf-blue/20 transition-colors duration-200 font-mono text-sm resize-vertical"></textarea>
+                        </div>
+                        <div>
+                            <label for="rce-method" class="block text-sm font-semibold text-gray-700 mb-2">Injection Method:</label>
+                            <select id="rce-method" name="method" class="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-cf-blue focus:ring-2 focus:ring-cf-blue/20 transition-colors duration-200">
+                                <option value="command">Command Injection</option>
+                                <option value="eval">Code Evaluation</option>
+                                <option value="include">File Inclusion</option>
+                                <option value="upload">File Upload</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="w-full bg-gradient-to-r from-cf-blue to-cf-purple text-white py-3 px-6 rounded-lg font-semibold transition-all duration-300 hover:shadow-lg hover:transform hover:-translate-y-1 flex items-center justify-center gap-3">
+                            <i class="fas fa-play"></i>
+                            Test RCE Attack
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results Section -->
+        <div class="results-section bg-white rounded-xl p-8 mb-8 shadow-xl" id="results-section" style="display: none;">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-3">
+                <i class="fas fa-chart-line text-cf-blue"></i>
+                Test Results
+            </h2>
+            <div class="result-card rounded-lg p-6" id="result-card">
+                <div class="flex justify-between items-center mb-6 flex-wrap gap-4">
+                    <div class="result-status text-2xl flex items-center gap-3" id="result-status"></div>
+                    <div class="result-timestamp text-gray-500 text-sm" id="result-timestamp"></div>
+                </div>
+                <div class="space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <strong class="text-gray-700">Attack Type:</strong>
+                            <span class="ml-2 text-gray-900" id="result-attack-type"></span>
+                        </div>
+                        <div>
+                            <strong class="text-gray-700">WAF Status:</strong>
+                            <span class="ml-2" id="result-waf-status"></span>
+                        </div>
+                    </div>
+                    <div>
+                        <strong class="text-gray-700">Payload:</strong>
+                        <code class="block mt-2 bg-gray-100 p-3 rounded font-mono text-sm break-all" id="result-payload"></code>
+                    </div>
+                    <div>
+                        <strong class="text-gray-700">Analysis:</strong>
+                        <pre class="mt-2 bg-gray-100 p-4 rounded text-sm whitespace-pre-wrap font-mono" id="result-response"></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- WAF Status Dashboard -->
+        <div class="bg-white rounded-xl p-8 shadow-xl">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-3">
+                <i class="fas fa-shield-alt text-cf-blue"></i>
+                WAF Protection Status
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="bg-gradient-to-br from-gray-50 to-gray-100 p-6 rounded-lg border border-gray-200 hover:shadow-md transition-shadow duration-300 flex items-center gap-4">
+                    <div class="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center text-white shadow-lg">
+                        <i class="fas fa-ban text-xl"></i>
+                    </div>
+                    <div class="flex-1">
+                        <h3 class="text-gray-700 font-semibold mb-1">Blocked Attacks</h3>
+                        <span class="text-3xl font-bold text-cf-blue" id="blocked-counter">0</span>
+                    </div>
+                </div>
+                <div class="bg-gradient-to-br from-gray-50 to-gray-100 p-6 rounded-lg border border-gray-200 hover:shadow-md transition-shadow duration-300 flex items-center gap-4">
+                    <div class="w-16 h-16 bg-gradient-to-br from-orange-500 to-red-600 rounded-full flex items-center justify-center text-white shadow-lg">
+                        <i class="fas fa-check text-xl"></i>
+                    </div>
+                    <div class="flex-1">
+                        <h3 class="text-gray-700 font-semibold mb-1">Allowed Requests</h3>
+                        <span class="text-3xl font-bold text-cf-blue" id="allowed-counter">0</span>
+                    </div>
+                </div>
+                <div class="bg-gradient-to-br from-gray-50 to-gray-100 p-6 rounded-lg border border-gray-200 hover:shadow-md transition-shadow duration-300 flex items-center gap-4">
+                    <div class="w-16 h-16 bg-gradient-to-br from-cf-blue to-cf-purple rounded-full flex items-center justify-center text-white shadow-lg">
+                        <i class="fas fa-chart-bar text-xl"></i>
+                    </div>
+                    <div class="flex-1">
+                        <h3 class="text-gray-700 font-semibold mb-1">Total Tests</h3>
+                        <span class="text-3xl font-bold text-cf-blue" id="total-counter">0</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
