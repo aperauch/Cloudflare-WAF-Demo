@@ -156,7 +156,31 @@ async function testAttack(attackType, data) {
     button.disabled = true;
 
     try {
-        // Send to the app endpoint to see what payload it receives
+        // First, test by making a direct request to the vulnerable endpoint
+        // This is what WAF should intercept and block
+        let wafBlocked = false;
+        let wafResponse = null;
+        
+        try {
+            const vulnerableUrl = `/vulnerable?q=${encodeURIComponent(data.payload)}`;
+            const wafTestResponse = await fetch(vulnerableUrl);
+            
+            // Check if response is from Cloudflare WAF (blocked)
+            const responseText = await wafTestResponse.text();
+            if (responseText.includes('Cloudflare') && responseText.includes('blocked')) {
+                wafBlocked = true;
+                wafResponse = 'BLOCKED by Cloudflare WAF';
+            } else {
+                // Parse JSON response from our app
+                wafResponse = JSON.parse(responseText);
+            }
+        } catch (error) {
+            // If fetch fails, might be blocked
+            wafBlocked = true;
+            wafResponse = 'Request blocked or failed';
+        }
+        
+        // Also send to the app endpoint for analysis
         const appResponse = await fetch(`/api/test/${attackType}`, {
             method: 'POST',
             headers: {
@@ -167,32 +191,36 @@ async function testAttack(attackType, data) {
 
         const result = await appResponse.json();
         
+        // Add WAF test results to the response
+        result.wafBlocked = wafBlocked;
+        result.wafResponse = wafResponse;
+        
         if (result.success) {
             // Compare submitted payload with received payload
             const payloadsMatch = originalPayload === result.receivedPayload;
             
-            // Determine result type based on payload comparison and maliciousness
+            // Determine result type based on WAF blocking and maliciousness
             let resultType = 'allowed'; // Default: green (good)
             let wafStatus = 'ALLOWED';
             let reason = 'Payload passed through unmodified';
             
-            if (!payloadsMatch) {
+            if (result.wafBlocked) {
                 if (result.isMalicious) {
-                    // Malicious payload was blocked/modified - this is good (green)
+                    // Malicious payload was blocked by WAF - this is good (green)
                     resultType = 'blocked-good';
                     wafStatus = 'BLOCKED';
-                    reason = 'Malicious payload was blocked or modified by WAF';
+                    reason = 'Malicious payload was BLOCKED by Cloudflare WAF';
                 } else {
-                    // Non-malicious payload was modified - neutral (yellow/orange)
+                    // Non-malicious payload was blocked - neutral (yellow/orange)
                     resultType = 'modified-neutral';
-                    wafStatus = 'MODIFIED';
-                    reason = 'Payload was modified by WAF (may be false positive)';
+                    wafStatus = 'BLOCKED';
+                    reason = 'Benign payload was blocked by WAF (potential false positive)';
                 }
             } else if (result.isMalicious) {
                 // Malicious payload passed through unchanged - this is bad (red)
                 resultType = 'allowed-bad';
                 wafStatus = 'ALLOWED';
-                reason = 'Malicious payload passed through unmodified - WAF may be disabled';
+                reason = 'Malicious payload ALLOWED through - WAF not blocking this attack';
             }
             
             // Create enhanced result with comparison
@@ -210,7 +238,7 @@ async function testAttack(attackType, data) {
             };
             
             displayResult(enhancedResult);
-            updateStats(!payloadsMatch); // WAF blocked = true if payloads don't match
+            updateStats(result.wafBlocked); // WAF blocked = true if Cloudflare blocked the request
         } else {
             showError(result.error || 'Test failed');
         }
