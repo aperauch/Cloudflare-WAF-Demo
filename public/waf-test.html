@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Simple WAF Test</title>
+</head>
+<body>
+    <h1>Simple WAF Test</h1>
+    <button onclick="testWAF()">Test WAF with XSS Payload</button>
+    <div id="result"></div>
+
+    <script>
+    async function testWAF() {
+        const payload = '<script>alert("XSS")</script>';
+        const testUrl = `/vulnerable?q=${encodeURIComponent(payload)}`;
+
+        console.log('Testing URL:', testUrl);
+
+        try {
+            const response = await fetch(testUrl);
+            console.log('Response status:', response.status);
+            console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+
+            const text = await response.text();
+            console.log('Response body (first 200 chars):', text.substring(0, 200));
+
+            document.getElementById('result').innerHTML = `
+                <h3>Result:</h3>
+                <p>Status: ${response.status}</p>
+                <p>WAF Status: ${response.status === 403 ? 'BLOCKED' : 'ALLOWED'}</p>
+                <p>Check console for details</p>
+            `;
+        } catch (error) {
+            console.error('Error:', error);
+            document.getElementById('result').innerHTML = `
+                <h3>Error:</h3>
+                <p>${error.message}</p>
+            `;
+        }
+    }
+    </script>
+</body>
+</html>
