@@ -94,6 +94,27 @@ function analyzePayloadIntegrity(receivedPayload, attackType) {
 
 // API Routes
 
+// Test XSS attack - create routes that WAF should block
+app.get('/vulnerable', (req, res) => {
+    const { q, search, input } = req.query;
+    const payload = q || search || input || '';
+    
+    // This route is designed to be blocked by WAF when malicious payloads are in query params
+    const result = analyzePayloadIntegrity(payload, 'xss');
+    
+    res.json({
+        success: true,
+        attackType: 'XSS',
+        submittedPayload: payload,
+        receivedPayload: result.receivedPayload,
+        context: 'query_parameter',
+        timestamp: result.timestamp,
+        serverProcessed: true,
+        isMalicious: result.isMalicious,
+        matchedPattern: result.matchedPattern
+    });
+});
+
 // Test XSS attack
 app.post('/api/test/xss', (req, res) => {
     const { payload, context } = req.body;
@@ -105,6 +126,9 @@ app.post('/api/test/xss', (req, res) => {
         });
     }
 
+    // Instead of just analyzing locally, make a request that WAF can intercept
+    const testUrl = `/vulnerable?q=${encodeURIComponent(payload)}`;
+    
     const result = analyzePayloadIntegrity(payload, 'xss');
     
     const response = {
@@ -116,7 +140,8 @@ app.post('/api/test/xss', (req, res) => {
         timestamp: result.timestamp,
         serverProcessed: result.serverProcessed,
         isMalicious: result.isMalicious,
-        matchedPattern: result.matchedPattern
+        matchedPattern: result.matchedPattern,
+        testUrl: testUrl
     };
 
     // Simulate response delay
