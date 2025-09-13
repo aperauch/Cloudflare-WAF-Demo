@@ -3,8 +3,7 @@ let testStats = {
     total: 0,
     passed: 0,
     failed: 0,
-    blocked: 0,
-    allowed: 0
+    blocked: 0
 };
 
 // DOM elements
@@ -18,7 +17,6 @@ const totalCounter = document.getElementById('total-counter');
 const passedCounter = document.getElementById('passed-counter');
 const failedCounter = document.getElementById('failed-counter');
 const blockedCounter = document.getElementById('blocked-counter');
-const allowedCounter = document.getElementById('allowed-counter');
 
 // Initialize the application
 document.addEventListener('DOMContentLoaded', function() {
@@ -361,19 +359,13 @@ function updateStats(testPassed, wasMalicious) {
         testStats.failed++;
     }
 
-    // Track blocked/allowed for WAF effectiveness
-    // For malicious payloads: blocked = good, allowed = bad
-    // For benign payloads: allowed = good, blocked = false positive
+    // Track blocked count (both malicious correctly blocked and false positives)
     if (wasMalicious) {
         if (testPassed === true) {
             testStats.blocked++; // Malicious was correctly blocked
-        } else if (testPassed === false) {
-            testStats.allowed++; // Malicious was incorrectly allowed
         }
     } else {
-        if (testPassed === true) {
-            testStats.allowed++; // Benign was correctly allowed
-        } else if (testPassed === null) {
+        if (testPassed === null) {
             testStats.blocked++; // Benign was blocked (false positive)
         }
     }
@@ -383,11 +375,10 @@ function updateStats(testPassed, wasMalicious) {
 
 // Update counter displays
 function updateCounters() {
-    totalCounter.textContent = testStats.total;
-    passedCounter.textContent = testStats.passed;
-    failedCounter.textContent = testStats.failed;
-    blockedCounter.textContent = testStats.blocked;
-    allowedCounter.textContent = testStats.allowed;
+    if (totalCounter) totalCounter.textContent = testStats.total;
+    if (passedCounter) passedCounter.textContent = testStats.passed;
+    if (failedCounter) failedCounter.textContent = testStats.failed;
+    if (blockedCounter) blockedCounter.textContent = testStats.blocked;
 }
 
 // Show error message
