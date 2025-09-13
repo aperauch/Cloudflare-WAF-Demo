@@ -32,29 +32,29 @@ const maliciousPatterns = {
         /expression\s*\(/gi
     ],
     sqli: [
-        /(\bor\b|\band\b)\s+['"]?\d+['"]?\s*=\s*['"]?\d+['"]?/gi,
-        /union\s+select/gi,
-        /drop\s+table/gi,
-        /insert\s+into/gi,
-        /delete\s+from/gi,
-        /update\s+\w+\s+set/gi,
-        /exec\s*\(/gi,
-        /sp_\w+/gi,
-        /xp_\w+/gi,
-        /--/g,
-        /\/\*.*?\*\//g
+        /(\bor\b|\band\b)\s+['"]?\d+['"]?\s*=\s*['"]?\d+['"]?/i,
+        /union\s+select/i,
+        /drop\s+table/i,
+        /insert\s+into/i,
+        /delete\s+from/i,
+        /update\s+\w+\s+set/i,
+        /exec\s*\(/i,
+        /sp_\w+/i,
+        /xp_\w+/i,
+        /--/,
+        /\/\*.*?\*\//
     ],
     rce: [
-        /;\s*(ls|dir|cat|type|whoami|id|pwd|uname)/gi,
-        /\$\([^)]+\)/g,
-        /`[^`]+`/g,
-        /\|\s*(ls|dir|cat|type|whoami|id|pwd|uname)/gi,
-        /&&\s*(ls|dir|cat|type|whoami|id|pwd|uname)/gi,
-        /eval\s*\(/gi,
-        /exec\s*\(/gi,
-        /system\s*\(/gi,
-        /shell_exec\s*\(/gi,
-        /passthru\s*\(/gi
+        /;\s*(ls|dir|cat|type|whoami|id|pwd|uname)/i,
+        /\$\([^)]+\)/,
+        /`[^`]+`/,
+        /\|\s*(ls|dir|cat|type|whoami|id|pwd|uname)/i,
+        /&&\s*(ls|dir|cat|type|whoami|id|pwd|uname)/i,
+        /eval\s*\(/i,
+        /exec\s*\(/i,
+        /system\s*\(/i,
+        /shell_exec\s*\(/i,
+        /passthru\s*\(/i
     ]
 };
 
