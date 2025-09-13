@@ -5,7 +5,7 @@ const bodyParser = require('body-parser');
 const path = require('path');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8080;
 
 // Middleware
 app.use(helmet({
@@ -259,8 +259,9 @@ app.use((req, res) => {
     });
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
     console.log(`🛡️  Cloudflare WAF Demo Server running on port ${PORT}`);
-    console.log(`📱 Open http://localhost:${PORT} to start testing`);
+    console.log(`📱 Server accessible at https://your-domain.com (via NGINX)`);
     console.log(`🔒 WAF protection simulation active`);
+    console.log(`🌐 Ready for production deployment with NGINX reverse proxy`);
 });
