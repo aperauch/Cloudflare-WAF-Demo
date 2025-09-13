@@ -286,7 +286,7 @@ app.use((req, res) => {
 
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`🛡️  Cloudflare WAF Demo Server running on port ${PORT}`);
-    console.log(`📱 Server accessible at https://your-domain.com (via NGINX)`);
+    console.log(`📱 Server accessible at https://waf.gocf.pro (via NGINX)`);
     console.log(`🔒 WAF protection simulation active`);
     console.log(`🌐 Ready for production deployment with NGINX reverse proxy`);
 });

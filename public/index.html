@@ -227,23 +227,32 @@
                 <i class="fas fa-shield-alt text-cf-blue"></i>
                 WAF Protection Status
             </h2>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div class="bg-gradient-to-br from-gray-50 to-gray-100 p-6 rounded-lg border border-gray-200 hover:shadow-md transition-shadow duration-300 flex items-center gap-4">
                     <div class="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center text-white shadow-lg">
-                        <i class="fas fa-ban text-xl"></i>
+                        <i class="fas fa-check-circle text-xl"></i>
                     </div>
                     <div class="flex-1">
-                        <h3 class="text-gray-700 font-semibold mb-1">Blocked Attacks</h3>
-                        <span class="text-3xl font-bold text-cf-blue" id="blocked-counter">0</span>
+                        <h3 class="text-gray-700 font-semibold mb-1">Tests Passed</h3>
+                        <span class="text-3xl font-bold text-green-600" id="passed-counter">0</span>
                     </div>
                 </div>
                 <div class="bg-gradient-to-br from-gray-50 to-gray-100 p-6 rounded-lg border border-gray-200 hover:shadow-md transition-shadow duration-300 flex items-center gap-4">
-                    <div class="w-16 h-16 bg-gradient-to-br from-orange-500 to-red-600 rounded-full flex items-center justify-center text-white shadow-lg">
-                        <i class="fas fa-check text-xl"></i>
+                    <div class="w-16 h-16 bg-gradient-to-br from-red-500 to-red-600 rounded-full flex items-center justify-center text-white shadow-lg">
+                        <i class="fas fa-times-circle text-xl"></i>
                     </div>
                     <div class="flex-1">
-                        <h3 class="text-gray-700 font-semibold mb-1">Allowed Requests</h3>
-                        <span class="text-3xl font-bold text-cf-blue" id="allowed-counter">0</span>
+                        <h3 class="text-gray-700 font-semibold mb-1">Tests Failed</h3>
+                        <span class="text-3xl font-bold text-red-600" id="failed-counter">0</span>
+                    </div>
+                </div>
+                <div class="bg-gradient-to-br from-gray-50 to-gray-100 p-6 rounded-lg border border-gray-200 hover:shadow-md transition-shadow duration-300 flex items-center gap-4">
+                    <div class="w-16 h-16 bg-gradient-to-br from-orange-500 to-yellow-600 rounded-full flex items-center justify-center text-white shadow-lg">
+                        <i class="fas fa-ban text-xl"></i>
+                    </div>
+                    <div class="flex-1">
+                        <h3 class="text-gray-700 font-semibold mb-1">Blocked</h3>
+                        <span class="text-3xl font-bold text-orange-600" id="blocked-counter">0</span>
                     </div>
                 </div>
                 <div class="bg-gradient-to-br from-gray-50 to-gray-100 p-6 rounded-lg border border-gray-200 hover:shadow-md transition-shadow duration-300 flex items-center gap-4">

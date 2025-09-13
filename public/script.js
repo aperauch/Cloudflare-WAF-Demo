@@ -1,6 +1,8 @@
 // Global state
 let testStats = {
     total: 0,
+    passed: 0,
+    failed: 0,
     blocked: 0,
     allowed: 0
 };
@@ -13,6 +15,8 @@ const resultCard = document.getElementById('result-card');
 
 // Counter elements
 const totalCounter = document.getElementById('total-counter');
+const passedCounter = document.getElementById('passed-counter');
+const failedCounter = document.getElementById('failed-counter');
 const blockedCounter = document.getElementById('blocked-counter');
 const allowedCounter = document.getElementById('allowed-counter');
 
@@ -91,30 +95,6 @@ function initializeForms() {
 
 // Load example payloads into forms
 function loadExamplePayloads() {
-    const examples = {
-        xss: [
-            '<script>alert("XSS Test")</script>',
-            '<img src=x onerror=alert("XSS")>',
-            'javascript:alert("XSS")',
-            '<svg onload=alert("XSS")>',
-            '"><script>alert("XSS")</script>'
-        ],
-        sqli: [
-            "' OR '1'='1",
-            "'; DROP TABLE users; --",
-            "1' UNION SELECT * FROM users--",
-            "admin'--",
-            "1' OR 1=1#"
-        ],
-        rce: [
-            '; ls -la',
-            '$(whoami)',
-            '`cat /etc/passwd`',
-            '| id',
-            '&& uname -a'
-        ]
-    };
-
     // Add click handlers to all code elements in example payload sections
     document.querySelectorAll('code').forEach(code => {
         // Check if this code element is in an example payloads section
@@ -150,36 +130,54 @@ async function testAttack(attackType, data) {
     const button = document.querySelector(`#${attackType}-form button[type="submit"]`);
     const originalText = button.innerHTML;
     const originalPayload = data.payload;
-    
+
     // Show loading state
     button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Testing...';
     button.disabled = true;
 
     try {
-        // First, test by making a direct request to the vulnerable endpoint
+        // Test by making a direct request to the vulnerable endpoint
         // This is what WAF should intercept and block
         let wafBlocked = false;
         let wafResponse = null;
-        
+        let httpStatus = null;
+        let testPassed = false;
+
         try {
             const vulnerableUrl = `/vulnerable?q=${encodeURIComponent(data.payload)}`;
             const wafTestResponse = await fetch(vulnerableUrl);
-            
-            // Check if response is from Cloudflare WAF (blocked)
-            const responseText = await wafTestResponse.text();
-            if (responseText.includes('Cloudflare') && responseText.includes('blocked')) {
+            httpStatus = wafTestResponse.status;
+
+            if (wafTestResponse.status === 403) {
+                // 403 Forbidden indicates WAF blocked the request
                 wafBlocked = true;
-                wafResponse = 'BLOCKED by Cloudflare WAF';
+                const responseText = await wafTestResponse.text();
+                if (responseText.includes('Cloudflare') || responseText.includes('blocked') || responseText.includes('Sorry, you have been blocked')) {
+                    wafResponse = 'BLOCKED by Cloudflare WAF (403 Forbidden)';
+                } else {
+                    wafResponse = 'BLOCKED by Web Application Firewall (403 Forbidden)';
+                }
+            } else if (wafTestResponse.status === 200) {
+                // 200 OK means request went through to the server
+                wafBlocked = false;
+                try {
+                    wafResponse = await wafTestResponse.json();
+                } catch {
+                    const responseText = await wafTestResponse.text();
+                    wafResponse = { message: 'Server response received', responseText: responseText.substring(0, 200) };
+                }
             } else {
-                // Parse JSON response from our app
-                wafResponse = JSON.parse(responseText);
+                // Other status codes (500, 404, etc.)
+                wafBlocked = true;
+                wafResponse = `Request failed with status ${wafTestResponse.status}`;
             }
         } catch (error) {
-            // If fetch fails, might be blocked
+            // Network error, CORS error, or connection refused
             wafBlocked = true;
-            wafResponse = 'Request blocked or failed';
+            wafResponse = `Network error: ${error.message}`;
+            httpStatus = 'ERROR';
         }
-        
+
         // Also send to the app endpoint for analysis
         const appResponse = await fetch(`/api/test/${attackType}`, {
             method: 'POST',
@@ -190,55 +188,66 @@ async function testAttack(attackType, data) {
         });
 
         const result = await appResponse.json();
-        
+
         // Add WAF test results to the response
         result.wafBlocked = wafBlocked;
         result.wafResponse = wafResponse;
-        
+        result.httpStatus = httpStatus;
+
         if (result.success) {
-            // Compare submitted payload with received payload
-            const payloadsMatch = originalPayload === result.receivedPayload;
-            
-            // Determine result type based on WAF blocking and maliciousness
-            let resultType = 'allowed'; // Default: green (good)
-            let wafStatus = 'ALLOWED';
-            let reason = 'Payload passed through unmodified';
-            
-            if (result.wafBlocked) {
-                if (result.isMalicious) {
-                    // Malicious payload was blocked by WAF - this is good (green)
-                    resultType = 'blocked-good';
-                    wafStatus = 'BLOCKED';
-                    reason = 'Malicious payload was BLOCKED by Cloudflare WAF';
+            // Determine if this is a pass or fail based on maliciousness and WAF response
+            let resultType = 'unknown';
+            let wafStatus = wafBlocked ? 'BLOCKED' : 'ALLOWED';
+            let reason = '';
+
+            if (result.isMalicious) {
+                // For malicious payloads, WAF should block them
+                if (wafBlocked) {
+                    // PASS: Malicious payload was correctly blocked
+                    resultType = 'test-pass';
+                    testPassed = true;
+                    reason = `✅ TEST PASSED: Malicious ${result.attackType} payload was correctly BLOCKED by WAF`;
                 } else {
-                    // Non-malicious payload was blocked - neutral (yellow/orange)
-                    resultType = 'modified-neutral';
-                    wafStatus = 'BLOCKED';
-                    reason = 'Benign payload was blocked by WAF (potential false positive)';
+                    // FAIL: Malicious payload was allowed through
+                    resultType = 'test-fail';
+                    testPassed = false;
+                    reason = `❌ TEST FAILED: Malicious ${result.attackType} payload was incorrectly ALLOWED through WAF`;
                 }
-            } else if (result.isMalicious) {
-                // Malicious payload passed through unchanged - this is bad (red)
-                resultType = 'allowed-bad';
-                wafStatus = 'ALLOWED';
-                reason = 'Malicious payload ALLOWED through - WAF not blocking this attack';
+            } else {
+                // For non-malicious payloads, WAF should generally allow them
+                if (!wafBlocked) {
+                    // PASS: Non-malicious payload was allowed
+                    resultType = 'test-pass';
+                    testPassed = true;
+                    reason = `✅ TEST PASSED: Non-malicious payload was correctly ALLOWED through WAF`;
+                } else {
+                    // NEUTRAL: Non-malicious payload was blocked (could be false positive)
+                    resultType = 'test-neutral';
+                    testPassed = null; // Neither pass nor fail
+                    reason = `⚠️ FALSE POSITIVE: Non-malicious payload was BLOCKED by WAF (may be overly strict)`;
+                }
             }
-            
-            // Create enhanced result with comparison
+
+            // Create enhanced result with clear pass/fail status
             const enhancedResult = {
                 ...result,
                 originalPayload: originalPayload,
-                payloadsMatch: payloadsMatch,
                 wafStatus: wafStatus,
                 resultType: resultType,
+                testPassed: testPassed,
+                httpStatus: httpStatus,
                 wafAnalysis: {
-                    blocked: !payloadsMatch,
+                    blocked: wafBlocked,
                     reason: reason,
-                    confidence: payloadsMatch ? 0 : 95
+                    confidence: 95,
+                    recommendation: result.isMalicious ?
+                        (wafBlocked ? 'WAF is working correctly for this attack type' : 'Consider enabling stricter WAF rules for this attack type') :
+                        (wafBlocked ? 'Consider reviewing WAF rules to reduce false positives' : 'WAF allows legitimate traffic as expected')
                 }
             };
-            
+
             displayResult(enhancedResult);
-            updateStats(result.wafBlocked); // WAF blocked = true if Cloudflare blocked the request
+            updateStats(testPassed, result.isMalicious);
         } else {
             showError(result.error || 'Test failed');
         }
@@ -273,44 +282,63 @@ function displayResult(result) {
 
     // Set status and colors based on result type
     switch (result.resultType) {
-        case 'blocked-good':
-            resultStatus.innerHTML = '<i class="fas fa-shield-alt"></i> BLOCKED';
-            resultStatus.className = 'result-status text-green-700 font-bold';
-            resultCard.className = 'result-card bg-green-50 border-2 border-green-200';
+        case 'test-pass':
+            resultStatus.innerHTML = '<i class="fas fa-check-circle"></i> TEST PASSED';
+            resultStatus.className = 'result-status text-green-700 font-bold text-2xl';
+            resultCard.className = 'result-card bg-green-50 border-2 border-green-300 rounded-lg p-6';
             break;
-        case 'modified-neutral':
-            resultStatus.innerHTML = '<i class="fas fa-exclamation-circle"></i> MODIFIED';
-            resultStatus.className = 'result-status text-yellow-700 font-bold';
-            resultCard.className = 'result-card bg-yellow-50 border-2 border-yellow-200';
+        case 'test-fail':
+            resultStatus.innerHTML = '<i class="fas fa-times-circle"></i> TEST FAILED';
+            resultStatus.className = 'result-status text-red-700 font-bold text-2xl';
+            resultCard.className = 'result-card bg-red-50 border-2 border-red-300 rounded-lg p-6';
             break;
-        case 'allowed-bad':
-            resultStatus.innerHTML = '<i class="fas fa-times-circle"></i> ALLOWED';
-            resultStatus.className = 'result-status text-red-700 font-bold';
-            resultCard.className = 'result-card bg-red-50 border-2 border-red-200';
+        case 'test-neutral':
+            resultStatus.innerHTML = '<i class="fas fa-exclamation-triangle"></i> FALSE POSITIVE';
+            resultStatus.className = 'result-status text-yellow-700 font-bold text-2xl';
+            resultCard.className = 'result-card bg-yellow-50 border-2 border-yellow-300 rounded-lg p-6';
             break;
-        default: // 'allowed' - benign payload allowed through
-            resultStatus.innerHTML = '<i class="fas fa-check-circle"></i> ALLOWED';
-            resultStatus.className = 'result-status text-green-700 font-bold';
-            resultCard.className = 'result-card bg-green-50 border-2 border-green-200';
+        default:
+            resultStatus.innerHTML = '<i class="fas fa-question-circle"></i> UNKNOWN';
+            resultStatus.className = 'result-status text-gray-700 font-bold text-2xl';
+            resultCard.className = 'result-card bg-gray-50 border-2 border-gray-300 rounded-lg p-6';
     }
 
     // Set content
     resultTimestamp.textContent = new Date(result.timestamp).toLocaleString();
     resultAttackType.textContent = result.attackType;
     resultPayload.textContent = result.originalPayload || result.submittedPayload;
-    
-    resultWafStatus.innerHTML = `<span class="font-semibold">${result.wafStatus}</span>`;
 
-    // Format response details showing payload comparison
-    const responseText = `Submitted Payload: ${result.originalPayload || result.submittedPayload}
-Received Payload: ${result.receivedPayload}
-Payloads Match: ${result.payloadsMatch ? 'Yes' : 'No'}
+    // Enhanced WAF status with HTTP status
+    const statusColor = result.wafStatus === 'BLOCKED' ? 'text-red-600' : 'text-green-600';
+    resultWafStatus.innerHTML = `<span class="font-semibold ${statusColor}">${result.wafStatus}</span> <span class="text-gray-500">(HTTP ${result.httpStatus})</span>`;
 
-Analysis: ${result.wafAnalysis ? result.wafAnalysis.reason : 'Payload comparison completed'}
+    // Enhanced response details with clear pass/fail information
+    const maliciousStatus = result.isMalicious ? '🚨 MALICIOUS' : '✅ BENIGN';
+    const payloadAnalysis = result.isMalicious
+        ? 'This payload contains known attack patterns and should be blocked by a properly configured WAF.'
+        : 'This payload appears benign and should typically be allowed through a properly configured WAF.';
 
-${result.payloadsMatch 
-    ? 'The payload reached the server unmodified, indicating no WAF filtering occurred.'
-    : 'The payload was modified or blocked, indicating WAF protection is active.'}`;
+    const responseText = `WAF TEST RESULT: ${result.wafAnalysis.reason}
+
+HTTP STATUS: ${result.httpStatus}
+PAYLOAD TYPE: ${maliciousStatus}
+WAF STATUS: ${result.wafStatus}
+
+SUBMITTED PAYLOAD:
+${result.originalPayload || result.submittedPayload}
+
+PAYLOAD ANALYSIS:
+${payloadAnalysis}
+
+${result.isMalicious && result.matchedPattern ? `DETECTED ATTACK PATTERN: ${result.matchedPattern}` : ''}
+
+WAF ANALYSIS:
+${result.wafAnalysis.reason}
+
+RECOMMENDATION:
+${result.wafAnalysis.recommendation}
+
+${result.wafResponse && typeof result.wafResponse === 'string' ? `WAF RESPONSE: ${result.wafResponse}` : ''}`;
 
     resultResponse.textContent = responseText;
 
@@ -320,19 +348,41 @@ ${result.payloadsMatch
 }
 
 // Update statistics
-function updateStats(wasBlocked) {
+function updateStats(testPassed, wasMalicious) {
     testStats.total++;
-    if (wasBlocked) {
-        testStats.blocked++;
-    } else {
-        testStats.allowed++;
+
+    // Track pass/fail status
+    if (testPassed === true) {
+        testStats.passed++;
+    } else if (testPassed === false) {
+        testStats.failed++;
     }
+
+    // Track blocked/allowed for WAF effectiveness
+    // For malicious payloads: blocked = good, allowed = bad
+    // For benign payloads: allowed = good, blocked = false positive
+    if (wasMalicious) {
+        if (testPassed === true) {
+            testStats.blocked++; // Malicious was correctly blocked
+        } else if (testPassed === false) {
+            testStats.allowed++; // Malicious was incorrectly allowed
+        }
+    } else {
+        if (testPassed === true) {
+            testStats.allowed++; // Benign was correctly allowed
+        } else if (testPassed === null) {
+            testStats.blocked++; // Benign was blocked (false positive)
+        }
+    }
+
     updateCounters();
 }
 
 // Update counter displays
 function updateCounters() {
     totalCounter.textContent = testStats.total;
+    passedCounter.textContent = testStats.passed;
+    failedCounter.textContent = testStats.failed;
     blockedCounter.textContent = testStats.blocked;
     allowedCounter.textContent = testStats.allowed;
 }
