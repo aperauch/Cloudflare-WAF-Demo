@@ -144,9 +144,12 @@ async function testAttack(attackType, data) {
         let testPassed = false;
 
         try {
-            const vulnerableUrl = `/vulnerable?q=${encodeURIComponent(data.payload)}`;
+            const vulnerableUrl = `/vulnerable?q=${encodeURIComponent(data.payload)}&_t=${Date.now()}`;
+            console.log('Testing URL:', vulnerableUrl);
             const wafTestResponse = await fetch(vulnerableUrl);
             httpStatus = wafTestResponse.status;
+            console.log('Response status:', wafTestResponse.status);
+            console.log('Response headers:', Array.from(wafTestResponse.headers.entries()));
 
             if (wafTestResponse.status === 403) {
                 // 403 Forbidden indicates WAF blocked the request
@@ -390,13 +393,13 @@ function updateCounters() {
 // Show error message
 function showError(message) {
     const errorDiv = document.createElement('div');
-    errorDiv.className = 'error-message';
+    errorDiv.className = 'bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4 flex items-center gap-3';
     errorDiv.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${message}`;
-    
-    // Insert at top of container
-    const container = document.querySelector('.container');
+
+    // Insert at top of main container
+    const container = document.querySelector('.max-w-6xl') || document.body;
     container.insertBefore(errorDiv, container.firstChild);
-    
+
     // Remove after 5 seconds
     setTimeout(() => {
         errorDiv.remove();
@@ -415,12 +418,12 @@ function copyToClipboard(text) {
 // Show success message
 function showSuccess(message) {
     const successDiv = document.createElement('div');
-    successDiv.className = 'success-message';
+    successDiv.className = 'bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4 flex items-center gap-3';
     successDiv.innerHTML = `<i class="fas fa-check-circle"></i> ${message}`;
-    
-    const container = document.querySelector('.container');
+
+    const container = document.querySelector('.max-w-6xl') || document.body;
     container.insertBefore(successDiv, container.firstChild);
-    
+
     setTimeout(() => {
         successDiv.remove();
     }, 3000);
